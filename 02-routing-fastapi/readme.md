@@ -223,3 +223,219 @@ We have now successfully learned how the `APIRouter` class functions and how to 
 
 ---
 
+# 🛡️ **Validating Request Bodies Using Pydantic Models**
+
+In FastAPI, it's essential to validate the data sent in request bodies. This process, known as **validation**, ensures that your application only receives data in the expected format. It's a crucial security measure that helps sanitize incoming data and reduce the risk of malicious attacks.
+
+A **model** in FastAPI is a class that defines the structure of data, dictating how it should be received and parsed. These models are created by inheriting from Pydantic's `BaseModel` class.
+
+-----
+
+## 📦 What is Pydantic?
+
+**Pydantic** is a powerful Python library designed for data validation and settings management using Python type annotations.
+
+In FastAPI, models defined with Pydantic are used as type hints for request bodies and response objects. This guide will focus on using Pydantic models to validate incoming request bodies.
+
+### Example Pydantic Model
+
+Here is a basic example of a Pydantic model.
+
+```python
+from pydantic import BaseModel
+
+class PacktBook(BaseModel):
+    id: int
+    name: str
+    publisher: str
+    isbn: str
+```
+
+### Code Explanation
+
+  * `from pydantic import BaseModel`: This line imports the core `BaseModel` class from the Pydantic library, which our custom model will inherit from.
+  * `class PacktBook(BaseModel):`: We define a new class named `PacktBook` that is a subclass of `BaseModel`. This inheritance gives our class all the data validation powers of Pydantic.
+  * `id: int`: This defines a field named `id` that must be an integer.
+  * `name: str`, `publisher: str`, `isbn: str`: These lines define three more fields that must all be strings.
+
+Any data object that is type-hinted with the `PacktBook` class must strictly contain these four fields with the specified data types.
+
+-----
+
+## 🛠️ Applying Validation to Our Todo Application
+
+Previously, in our todo application, the route for adding a new item was defined to accept a generic dictionary (`dict`) as the request body.
+
+```python
+async def add_todo(todo: dict) -> dict:
+    ...
+```
+
+The expected data format for a `POST` request was:
+
+```json
+{
+    "id": 1,
+    "item": "My first todo item"
+}
+```
+
+The major weakness of using `dict` as the type hint is its lack of structure. A user could send an empty dictionary `{}` or a dictionary with completely different keys, and the application would not raise a validation error.
+
+To enforce the correct structure, we can create a Pydantic model that defines exactly what fields are required.
+
+### Step 1: Create a `model.py` File 📁
+
+First, create a new file named `model.py` in your project directory to store your Pydantic models.
+
+### Step 2: Define the `Todo` Model 📝
+
+Inside the new `model.py` file, add the following code to define a model for our todo items.
+
+```python
+from pydantic import BaseModel
+
+class Todo(BaseModel):
+    id: int
+    item: str
+```
+
+### Code Explanation
+
+We have created a Pydantic model named `Todo` that will only accept data containing two specific fields:
+
+  * `id`: This field must be an **integer**.
+  * `item`: This field must be a **string**.
+
+### Step 3: Update the Route Handler 🔄
+
+Now, let's use our new `Todo` model in the `POST` route.
+
+First, import the `Todo` model into your file containing the router (e.g., `todo.py` or `api.py`).
+
+```python
+from model import Todo
+```
+
+Next, update the `add_todo` function by replacing the `dict` type hint with our `Todo` model.
+
+```python
+todo_list = []
+
+@todo_router.post("/todo")
+async def add_todo(todo: Todo) -> dict:
+    todo_list.append(todo)
+    return {"message": "Todo added successfully"}
+
+
+@todo_router.get("/todo")
+async def retrieve_todos() -> dict:
+    return {"todos": todo_list}
+```
+
+By changing `todo: dict` to `todo: Todo`, FastAPI will now automatically validate any incoming request body against the `Todo` model.
+
+### Step 4: Verify the New Validator 🧪
+
+Let's test our updated endpoint to see the validation in action.
+
+#### Test 1: Sending an Invalid Request Body (Empty Dictionary)
+
+We'll use `curl` to send a `POST` request with an empty JSON object.
+
+```bash
+(venv)$ curl -X 'POST' \
+ 'http://127.0.0.1:8000/todo' \
+ -H 'accept: application/json' \
+ -H 'Content-Type: application/json' \
+ -d '{}'
+```
+
+**❌ Error Response:**
+
+Because the required fields (`id` and `item`) are missing, FastAPI automatically returns a detailed validation error.
+
+```json
+{
+  "detail": [
+    {
+      "loc": [
+        "body",
+        "id"
+      ],
+      "msg": "field required",
+      "type": "value_error.missing"
+    },
+    {
+      "loc": [
+        "body",
+        "item"
+      ],
+      "msg": "field required",
+      "type": "value_error.missing"
+    }
+  ]
+}
+```
+
+#### Test 2: Sending a Valid Request Body
+
+Now, let's send a request with the correct data structure.
+
+```bash
+(venv)$ curl -X 'POST' \
+ 'http://127.0.0.1:8000/todo' \
+ -H 'accept: application/json' \
+ -H 'Content-Type: application/json' \
+ -d '{
+ "id": 2,
+ "item": "Validation models help with input types"
+}'
+```
+
+**✅ Success Response:**
+
+The request body passes validation, and the application returns a successful response.
+
+```json
+{
+  "message": "Todo added successfully"
+}
+```
+
+-----
+
+## nesting models
+
+Pydantic models also support nesting, allowing you to build complex data structures.
+
+### Example of a Nested Model
+
+```python
+from pydantic import BaseModel
+
+class Item(BaseModel):
+    item: str
+    status: str
+
+class Todo(BaseModel):
+    id: int
+    item: Item # The 'item' field is now another Pydantic model
+```
+
+With this structure, the expected JSON for a `Todo` object would look like this:
+
+```json
+{
+    "id": 1,
+    "item": {
+        "item": "Learn about nested models",
+        "status": "completed"
+    }
+}
+```
+
+We have now learned what Pydantic models are, how to create them, and how to use them for robust request body validation in FastAPI.
+
+
+---

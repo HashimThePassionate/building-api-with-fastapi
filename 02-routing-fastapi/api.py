@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from todo import todo_router
+from model import Todo
 app = FastAPI()
 
 @app.get("/")
