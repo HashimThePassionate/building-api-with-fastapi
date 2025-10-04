@@ -538,3 +538,126 @@ FastAPI provides a dedicated `Path` class that serves two main purposes:
 > **Example with validation:** `Path(..., gt=0)` would mean the `todo_id` is required and must be greater than 0.
 
 ---
+
+# ❓ **Query Parameters**
+
+A **query parameter** is an optional key-value pair that appears in a URL, typically after a question mark (`?`). Its primary purpose is to filter or customize requests, allowing you to retrieve specific data based on the supplied queries.
+
+In a FastAPI route handler, any function argument that does **not** match a path parameter is automatically interpreted as a query parameter. You can also define one explicitly by using an instance of the `Query()` class.
+
+```python
+from fastapi import Query
+
+async def query_route(query: str = Query(None)):
+    return query
+```
+
+> 📚 We will explore advanced use cases for query parameters later on when we build more complex applications.
+
+Now that you've learned how to create routes, validate request bodies, and use parameters, let's see how these components work together.
+
+-----
+
+# 📦 **The Request Body**
+
+In the previous sections, we've seen how to use the `APIRouter` class, validate data with Pydantic models, and handle path parameters. A key component that ties these concepts together is the **request body**.
+
+A **request body** is the data you send *to* your API. It is typically used with routing methods that create or modify data, such as `POST` and `UPDATE`.
+
+> ### 📝 `POST` vs. `UPDATE` Methods
+>
+>   * The **`POST`** method is used when a new resource is to be inserted or created on the server.
+>   * The **`UPDATE`** method (commonly `PUT` or `PATCH`) is used when existing data on the server needs to be modified.
+
+Let's look at the `POST` request we used earlier in the chapter:
+
+```bash
+(venv)$ curl -X 'POST' \
+ 'http://127.0.0.1:8000/todo' \
+ -H 'accept: application/json' \
+ -H 'Content-Type: application/json' \
+ -d '{
+ "id": 2,
+ "item": "Validation models help with input types"
+}'
+```
+
+In the command above, the request body is the JSON data sent with the `-d` flag:
+
+```json
+{
+  "id": 2,
+  "item": "Validation models help with input types"
+}
+```
+
+> ### 💡 Tip: Using the `Body()` Class
+>
+> FastAPI also provides a `Body()` class, which can be used similarly to `Path()` and `Query()` to add extra validation and metadata to your request bodies.
+
+-----
+
+# 📚 **FastAPI's Automatic API Documentation**
+
+One of FastAPI's most powerful features is its ability to automatically generate documentation for your API. It uses the JSON Schema standard to create definitions for your Pydantic models and documents all your routes, including their path parameters, query parameters, request bodies, and response models.
+
+This documentation is available in two interactive formats by default:
+
+  * **Swagger UI**
+  * **ReDoc**
+
+### 🚀 Swagger UI (Interactive Docs)
+
+Swagger UI provides a rich, interactive environment where you can explore and test your API endpoints directly in the browser.
+
+You can access it by navigating to the `/docs` path of your application's URL.
+
+**URL:** `http://127.0.0.1:8000/docs`
+
+The interactive documentation allows you to expand each endpoint, see its details, and even try it out. For example, you can use the interface to add a new todo without needing a tool like `curl`.
+
+### 📜 ReDoc (Detailed Documentation)
+
+ReDoc offers an alternative documentation format that presents a clean, detailed, and well-structured view of your API, models, and routes. It's excellent for a comprehensive overview.
+
+You can access it by navigating to the `/redoc` path of your application's URL.
+
+**URL:** `http://127.0.0.1:8000/redoc`
+
+### ✨ Enhancing Docs with Example Schemas
+
+To make your documentation even more helpful, you can provide example data for your models. This helps users understand exactly what kind of data to send in a request. You can set an example by embedding a `Config` class inside your Pydantic model.
+
+Let's add an example schema to our `Todo` model.
+
+```python
+from pydantic import BaseModel
+
+class Todo(BaseModel):
+    id: int
+    item: str
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "id": 1,
+                "item": "Example schema!"
+            }
+        }
+```
+
+#### Code Explanation
+
+  * `class Config:`: We create a nested class named `Config` inside our model.
+  * `schema_extra`: This is a special property within the `Config` class where you can define extra information for the JSON Schema.
+  * `"example": { ... }`: We provide a dictionary under the key `"example"` that contains the sample data for our `Todo` model.
+
+After adding this code and refreshing your documentation pages, the example will appear.
+
+  * In **ReDoc**, when you click on the "Add Todo" endpoint, the example is shown in the right-hand pane, clearly demonstrating the expected request body.
+
+  * In the **Swagger UI**, the example schema will also be visible, guiding users as they test the API.
+
+By adding example schemas, you can guide users on how to properly send requests to your API. The interactive documentation from Swagger serves as a playground for testing, while the detailed documentation from ReDoc acts as a comprehensive knowledge base for using the API.
+
+---
