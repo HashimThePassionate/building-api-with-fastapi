@@ -661,3 +661,266 @@ After adding this code and refreshing your documentation pages, the example will
 By adding example schemas, you can guide users on how to properly send requests to your API. The interactive documentation from Swagger serves as a playground for testing, while the detailed documentation from ReDoc acts as a comprehensive knowledge base for using the API.
 
 ---
+
+# 🛠️ **Building a Simple CRUD Application**
+
+We have already established the "Create" and "Read" functionalities for our todo application. Now, let's complete the project by building the routes for the "Update" and "Delete" operations, finalizing our simple **CRUD** (Create, Read, Update, Delete) app.
+
+-----
+
+## 🔄 The Update Operation
+
+Let's begin by building the route to update an existing todo item.
+
+### Step 1: Create the Update Model 📝
+
+First, we need a Pydantic model to validate the request body for the `UPDATE` route. Since we only want to allow the user to update the content of the todo item, this model will only contain the `item` field.
+
+In your `model.py` file, add the following class:
+
+```python
+from pydantic import BaseModel
+
+class TodoItem(BaseModel):
+    item: str
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "item": "Read the next chapter of the book"
+            }
+        }
+```
+
+#### Code Explanation
+
+  * `class TodoItem(BaseModel):`: We define a new model `TodoItem` that will be used specifically for update requests.
+  * `item: str`: This model requires a single field, `item`, which must be a string. This is the new text for the todo.
+  * `class Config:`: We include an example in the schema to guide users in the API documentation.
+
+### Step 2: Write the Update Route ✍️
+
+Next, we will write the route handler for updating a todo in the `todo.py` file.
+
+```python
+from fastapi import APIRouter, Path
+from model import Todo, TodoItem
+
+todo_router = APIRouter()
+
+todo_list = []
+
+@todo_router.post("/todo")
+# ... (existing POST route)
+
+@todo_router.get("/todo")
+# ... (existing GET all route)
+
+@todo_router.get("/todo/{todo_id}")
+# ... (existing GET single route)
+
+@todo_router.put("/todo/{todo_id}")
+async def update_todo(todo_data: TodoItem, todo_id: int = Path(..., title="The ID of the todo to be updated")) -> dict:
+    for todo in todo_list:
+        if todo.id == todo_id:
+            todo.item = todo_data.item
+            return {
+                "message": "Todo updated successfully."
+            }
+    return {
+        "message": "Todo with supplied ID doesn't exist."
+    }
+```
+
+#### Code Explanation
+
+  * `@todo_router.put("/todo/{todo_id}")`: This decorator registers the function to handle `PUT` HTTP requests. The `{todo_id}` is a path parameter to identify which todo to update.
+  * `async def update_todo(...)`: This is our route handler function.
+  * `todo_data: TodoItem`: This argument receives the request body and validates it against our `TodoItem` model.
+  * `todo_id: int = Path(...)`: This captures the ID from the URL path.
+  * **Function Logic**: The code iterates through the `todo_list`. When it finds a todo with a matching `id`, it updates that todo's `item` field with the new data from the request body (`todo_data.item`) and returns a success message. If no match is found, it returns an error.
+
+### Step 3: Test the Update Route 🧪
+
+Let's test the new route to ensure it works correctly.
+
+#### A. First, Add a Todo (`POST`)
+
+We need an item to update, so let's create one.
+
+```bash
+(venv)$ curl -X 'POST' \
+ 'http://127.0.0.1:8000/todo' \
+ -H 'accept: application/json' \
+ -H 'Content-Type: application/json' \
+ -d '{
+ "id": 1,
+ "item": "Example Schema!"
+}'
+```
+
+**✅ Response:**
+
+```json
+{
+  "message": "Todo added successfully."
+}
+```
+
+#### B. Next, Update the Todo (`PUT`)
+
+Now, send a `PUT` request to update the item with ID `1`.
+
+```bash
+(venv)$ curl -X 'PUT' \
+ 'http://127.0.0.1:8000/todo/1' \
+ -H 'accept: application/json' \
+ -H 'Content-Type: application/json' \
+ -d '{
+ "item": "Read the next chapter of the book"
+}'
+```
+
+**✅ Response:**
+
+```json
+{
+  "message": "Todo updated successfully."
+}
+```
+
+#### C. Finally, Verify the Update (`GET`)
+
+Let's retrieve the todo again to confirm its content has changed.
+
+```bash
+(venv)$ curl -X 'GET' \
+ 'http://127.0.0.1:8000/todo/1' \
+ -H 'accept: application/json'
+```
+
+**✅ Response:**
+
+```json
+{
+  "todo": {
+    "id": 1,
+    "item": "Read the next chapter of the book"
+  }
+}
+```
+
+The response confirms that the todo was successfully updated\!
+
+-----
+
+## 🗑️ The Delete Operation
+
+Now, let's create the routes for deleting a single todo and for deleting all todos.
+
+### Step 1: Write the Delete Routes ✍️
+
+In `todo.py`, add the following two route handlers.
+
+```python
+@todo_router.delete("/todo/{todo_id}")
+async def delete_single_todo(todo_id: int) -> dict:
+    for index in range(len(todo_list)):
+        todo = todo_list[index]
+        if todo.id == todo_id:
+            todo_list.pop(index)
+            return {
+                "message": "Todo deleted successfully."
+            }
+    return {
+        "message": "Todo with supplied ID doesn't exist."
+    }
+
+@todo_router.delete("/todo")
+async def delete_all_todo() -> dict:
+    todo_list.clear()
+    return {
+        "message": "Todos deleted successfully."
+    }
+```
+
+#### Code Explanation
+
+  * `@todo_router.delete("/todo/{todo_id}")`: This route handles `DELETE` requests for a specific todo, identified by its `todo_id`.
+  * `delete_single_todo`: The function iterates through the list using an index. This is important because `list.pop(index)` is used to remove the item at a specific position. When a match is found, the item is removed, and a success message is returned.
+  * `@todo_router.delete("/todo")`: This route handles `DELETE` requests to the base `/todo` endpoint.
+  * `delete_all_todo`: This function is much simpler. It calls `todo_list.clear()`, which efficiently removes all items from the list, and then returns a success message.
+
+### Step 2: Test the Delete Route 🧪
+
+Let's test the deletion of a single todo.
+
+#### A. First, Add a Todo (`POST`)
+
+We need an item to delete.
+
+```bash
+(venv)$ curl -X 'POST' \
+ 'http://127.0.0.1:8000/todo' \
+ -H 'accept: application/json' \
+ -H 'Content-Type: application/json' \
+ -d '{
+ "id": 1,
+ "item": "Example Schema!"
+}'
+```
+
+**✅ Response:**
+
+```json
+{
+  "message": "Todo added successfully."
+}
+```
+
+#### B. Next, Delete the Todo (`DELETE`)
+
+Send a `DELETE` request for the todo with ID `1`.
+
+```bash
+(venv)$ curl -X 'DELETE' \
+ 'http://127.0.0.1:8000/todo/1' \
+ -H 'accept: application/json'
+```
+
+**✅ Response:**
+
+```json
+{
+  "message": "Todo deleted successfully."
+}
+```
+
+#### C. Finally, Verify the Deletion (`GET`)
+
+Attempt to retrieve the deleted todo.
+
+```bash
+(venv)$ curl -X 'GET' \
+ 'http://127.0.0.1:8000/todo/1' \
+ -H 'accept: application/json'
+```
+
+**❌ Response:**
+
+```json
+{
+  "message": "Todo with supplied ID doesn't exist."
+}
+```
+
+The error message confirms that the todo has been successfully deleted.
+
+-----
+
+## ✅ Application Complete
+
+In this section, we successfully built a complete CRUD todo application by combining the lessons learned from the previous sections. By validating our request bodies with Pydantic models, we ensured that proper data is sent to the API. The inclusion of path parameters in our routes also enabled us to perform specific actions like retrieving, updating, and deleting a single todo from our list.
+
+
+---
