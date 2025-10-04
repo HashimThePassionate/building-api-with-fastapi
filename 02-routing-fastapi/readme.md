@@ -1,5 +1,30 @@
 # 🚀 **Understanding Routing in FastAPI**
 
+</br>
+
+<details>
+<summary>📑 Table of Contents</summary>
+
+- [🚀 Understanding Routing in FastAPI](#-understanding-routing-in-fastapi)
+  - [🌐 What are HTTP Request Methods?](#-what-are-http-request-methods)
+  - [📦 Routing with the APIRouter Class](#-routing-with-the-apirouter-class)
+- [🛡️ Validating Request Bodies Using Pydantic Models](#️-validating-request-bodies-using-pydantic-models)
+  - [📦 What is Pydantic?](#-what-is-pydantic)
+  - [🛠️ Applying Validation to Our Todo Application](#️-applying-validation-to-our-todo-application)
+- [🛣️ Path and Query Parameters](#️-path-and-query-parameters)
+  - [🔍 Path Parameters](#-path-parameters)
+  - [❓ Query Parameters](#-query-parameters)
+- [📦 The Request Body](#-the-request-body)
+- [📚 FastAPI's Automatic API Documentation](#-fastapis-automatic-api-documentation)
+- [🛠️ Building a Simple CRUD Application](#️-building-a-simple-crud-application)
+  - [🔄 The Update Operation](#-the-update-operation)
+  - [🗑️ The Delete Operation](#️-the-delete-operation)
+  - [✅ Application Complete](#-application-complete)
+
+</details>
+
+<br/>
+
 In FastAPI, a **route** is a specific path that is set up to receive requests from a particular **HTTP request method** (like GET or POST). It can also be designed to accept parameters. When your application receives a request, it first checks if a matching route has been defined. If a match is found, the request is passed to a **route handler** for processing.
 
 A **route handler** is simply a function that contains the logic to process an incoming request. For example, a route handler might be a function that connects to a database to fetch specific records when a user sends a request to a particular route.
@@ -57,7 +82,7 @@ Let's build a practical example by creating a new path operation using `APIRoute
 First, navigate to your project's `todos` folder and create a new Python file named `todo.py`.
 
 ```bash
-(venv)$ touch todo.py
+ touch todo.py
 ```
 
 ### Step 2: Define the Todo Router and Logic 🧠
@@ -137,7 +162,7 @@ app.include_router(todo_router)
 With everything set up, start the Uvicorn server from your terminal.
 
 ```bash
-(venv)$ uvicorn api:app --port 8000 --reload
+ uvicorn api:app --port 8000 --reload
 ```
 
 The command will start the application, and you will see a real-time log of its processes in your terminal.
@@ -154,14 +179,14 @@ INFO:     Application startup complete.
 
 ### Step 5: Test the Endpoints 🧪
 
-Now, let's test our application by sending requests to the defined routes using `curl`.
+Now, let's test our application by sending requests to the defined routes using curl`.
 
 #### Test the Root Endpoint (`/`)
 
 First, send a `GET` request to the root URL.
 
 ```bash
-(venv)$ curl http://127.0.0.1:8000/
+curl http://127.0.0.1:8000/
 ```
 
 You should see the "Hello World" message logged in your console.
@@ -177,7 +202,7 @@ You should see the "Hello World" message logged in your console.
 Next, let's check if our todo routes are working by retrieving the list of todos.
 
 ```bash
-(venv)$ curl -X 'GET' \
+curl -X 'GET' \
   'http://127.0.0.1:8000/todo' \
   -H 'accept: application/json'
 ```
@@ -199,7 +224,7 @@ The todo route is functional\! 🎉
 Finally, let's test the `POST` operation by sending a request to add a new item to our todo list.
 
 ```bash
-(venv)$ curl -X 'POST' \
+curl -X 'POST' \
   'http://127.0.0.1:8000/todo' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
@@ -341,10 +366,10 @@ Let's test our updated endpoint to see the validation in action.
 
 #### Test 1: Sending an Invalid Request Body (Empty Dictionary)
 
-We'll use `curl` to send a `POST` request with an empty JSON object.
+We'll use curl` to send a `POST` request with an empty JSON object.
 
 ```bash
-(venv)$ curl -X 'POST' \
+curl -X 'POST' \
  'http://127.0.0.1:8000/todo' \
  -H 'accept: application/json' \
  -H 'Content-Type: application/json' \
@@ -383,7 +408,7 @@ Because the required fields (`id` and `item`) are missing, FastAPI automatically
 Now, let's send a request with the correct data structure.
 
 ```bash
-(venv)$ curl -X 'POST' \
+curl -X 'POST' \
  'http://127.0.0.1:8000/todo' \
  -H 'accept: application/json' \
  -H 'Content-Type: application/json' \
@@ -498,10 +523,10 @@ async def get_single_todo(todo_id: int = Path(..., title="The ID of the todo to 
 
 ### Testing the Route 🧪
 
-Let's test our new endpoint using `curl`. We will try to retrieve the todo with an ID of `1`.
+Let's test our new endpoint using curl`. We will try to retrieve the todo with an ID of `1`.
 
 ```bash
-(venv)$ curl -X 'GET' \
+curl -X 'GET' \
   'http://127.0.0.1:8000/todo/1' \
   -H 'accept: application/json'
 ```
@@ -572,7 +597,7 @@ A **request body** is the data you send *to* your API. It is typically used with
 Let's look at the `POST` request we used earlier in the chapter:
 
 ```bash
-(venv)$ curl -X 'POST' \
+curl -X 'POST' \
  'http://127.0.0.1:8000/todo' \
  -H 'accept: application/json' \
  -H 'Content-Type: application/json' \
@@ -614,7 +639,7 @@ You can access it by navigating to the `/docs` path of your application's URL.
 
 **URL:** `http://127.0.0.1:8000/docs`
 
-The interactive documentation allows you to expand each endpoint, see its details, and even try it out. For example, you can use the interface to add a new todo without needing a tool like `curl`.
+The interactive documentation allows you to expand each endpoint, see its details, and even try it out. For example, you can use the interface to add a new todo without needing a tool like curl`.
 
 ### 📜 ReDoc (Detailed Documentation)
 
@@ -749,7 +774,7 @@ Let's test the new route to ensure it works correctly.
 We need an item to update, so let's create one.
 
 ```bash
-(venv)$ curl -X 'POST' \
+curl -X 'POST' \
  'http://127.0.0.1:8000/todo' \
  -H 'accept: application/json' \
  -H 'Content-Type: application/json' \
@@ -772,7 +797,7 @@ We need an item to update, so let's create one.
 Now, send a `PUT` request to update the item with ID `1`.
 
 ```bash
-(venv)$ curl -X 'PUT' \
+curl -X 'PUT' \
  'http://127.0.0.1:8000/todo/1' \
  -H 'accept: application/json' \
  -H 'Content-Type: application/json' \
@@ -794,7 +819,7 @@ Now, send a `PUT` request to update the item with ID `1`.
 Let's retrieve the todo again to confirm its content has changed.
 
 ```bash
-(venv)$ curl -X 'GET' \
+curl -X 'GET' \
  'http://127.0.0.1:8000/todo/1' \
  -H 'accept: application/json'
 ```
@@ -860,7 +885,7 @@ Let's test the deletion of a single todo.
 We need an item to delete.
 
 ```bash
-(venv)$ curl -X 'POST' \
+curl -X 'POST' \
  'http://127.0.0.1:8000/todo' \
  -H 'accept: application/json' \
  -H 'Content-Type: application/json' \
@@ -883,7 +908,7 @@ We need an item to delete.
 Send a `DELETE` request for the todo with ID `1`.
 
 ```bash
-(venv)$ curl -X 'DELETE' \
+curl -X 'DELETE' \
  'http://127.0.0.1:8000/todo/1' \
  -H 'accept: application/json'
 ```
@@ -901,7 +926,7 @@ Send a `DELETE` request for the todo with ID `1`.
 Attempt to retrieve the deleted todo.
 
 ```bash
-(venv)$ curl -X 'GET' \
+curl -X 'GET' \
  'http://127.0.0.1:8000/todo/1' \
  -H 'accept: application/json'
 ```
