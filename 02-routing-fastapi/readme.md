@@ -663,7 +663,7 @@ class Todo(BaseModel):
     item: str
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "id": 1,
                 "item": "Example schema!"
@@ -674,7 +674,7 @@ class Todo(BaseModel):
 #### Code Explanation
 
   * `class Config:`: We create a nested class named `Config` inside our model.
-  * `schema_extra`: This is a special property within the `Config` class where you can define extra information for the JSON Schema.
+  * `json_schema_extra`: This is a special property within the `Config` class where you can define extra information for the JSON Schema.
   * `"example": { ... }`: We provide a dictionary under the key `"example"` that contains the sample data for our `Todo` model.
 
 After adding this code and refreshing your documentation pages, the example will appear.
@@ -710,7 +710,7 @@ class TodoItem(BaseModel):
     item: str
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "item": "Read the next chapter of the book"
             }
