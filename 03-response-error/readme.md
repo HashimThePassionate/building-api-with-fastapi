@@ -124,3 +124,229 @@ A standard practice in web development, regardless of the framework, is to retur
 
 
 ---
+
+# 🏗️ **Building Response Models in FastAPI**
+
+In FastAPI, **response models** are a powerful feature for defining the precise data structure of the output an API endpoint should return. While they are built using Pydantic, just like input models, their primary purpose is to shape, filter, and validate the outgoing data.
+
+-----
+
+### The Challenge: Unfiltered API Responses  unfiltered
+
+Let's consider a simple API route designed to retrieve a list of to-do items from a database or an in-memory list.
+
+#### Example Route Definition
+
+Without a response model, the route might look like this:
+
+```python
+@todo_router.get("/todo")
+async def retrieve_todo() -> dict:
+    return {"todos": todo_list}
+```
+
+This endpoint is defined to return a dictionary. If `todo_list` contains objects with multiple fields (e.g., `id` and `item`), the API will return all of them.
+
+#### Example Output
+
+A request to this endpoint would yield the following JSON response, which includes every field for each to-do item:
+
+```json
+{
+  "todos": [
+    {
+      "id": 1,
+      "item": "IGI ORIGIN"
+    },
+    {
+      "id": 2,
+      "item": "Call Of Duty Ghost"
+    },
+    {
+      "id": 3,
+      "item": "Call Of Duty Modern Warfare"
+    }
+  ]
+}
+```
+
+To return only specific information, such as just the to-do item descriptions, one would typically need to write additional logic to process and filter the data before sending it. Fortunately, FastAPI provides a more elegant solution using the `response_model` argument.
+
+-----
+
+### The Solution: Crafting Pydantic Models for Output ✨
+
+We can create specific Pydantic models that declare exactly which fields should be included in the response. Let's create two new models in the `model.py` file to structure our desired output. Our goal is to return an array of just the to-do items, excluding their IDs.
+
+#### Code: `model.py`
+
+```python
+from pydantic import BaseModel
+from typing import List
+
+# Defines the structure for a single to-do item in the response.
+class TodoItem(BaseModel):
+    item: str
+
+    # Provides example data for the API documentation.
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "item": "Read the next chapter of the book"
+            }
+        }
+
+# Defines the structure for the top-level response object.
+class TodoItems(BaseModel):
+    todos: List[TodoItem]
+
+    # Provides a full example for the list of items.
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "todos": [
+                    {"item": "Example schema 1!"},
+                    {"item": "Example schema 2!"},
+                    {"item": "Example schema 3!"}
+                ]
+            }
+        }
+```
+
+#### Code Explanation 🧐
+
+  * **`TodoItem(BaseModel)`**: This class defines the structure for a *single* item in our response list.
+
+      * `item: str`: It declares that each to-do object in the response must have a field named `item` which is a string.
+      * `class Config`: This nested class is used to configure the model's behavior.
+      * `json_schema_extra`: This dictionary provides example data that will be displayed in the automatically generated API documentation (like Swagger UI), making the API easier to understand and use.
+
+  * **`TodoItems(BaseModel)`**: This class defines the overall structure of the final JSON response.
+
+      * `todos: List[TodoItem]`: This is the key part. It declares a field named `todos` that must be a list (`List`) where each element in the list conforms to the `TodoItem` model we just defined. This creates a nested model structure.
+
+-----
+
+### Applying the Response Model to the Route ⚙️
+
+Now, let's update our route in `todo.py` to use the newly created `TodoItems` model as its response model.
+
+#### Code: `todo.py`
+
+```python
+# Import the new models along with the existing Todo model.
+from model import Todo, TodoItem, TodoItems
+...
+
+@todo_router.get("/todo", response_model=TodoItems)
+async def retrieve_todo() -> dict:
+    return {"todos": todo_list}
+```
+
+#### Code Explanation 🧐
+
+  * `from model import Todo, TodoItem, TodoItems`: We first import the necessary models.
+  * `response_model=TodoItems`: This is the crucial addition to the route decorator. By setting this argument, we instruct FastAPI to:
+    1.  **Filter the Output**: Automatically process the data returned by the function (`{"todos": todo_list}`) and ensure the final JSON response matches the structure of the `TodoItems` model. Any fields not defined in `TodoItems` (like `id`) will be excluded.
+    2.  **Validate Data**: Ensure the returned data is of the correct type.
+    3.  **Document the API**: Update the API documentation to show clients exactly what the response schema will look like.
+
+-----
+
+### Putting It All Together: A Practical Demonstration 🧪
+
+Let's start the application and test the updated endpoint.
+
+#### 1\. Start the Application
+
+Run the following command in your terminal to start the Uvicorn server:
+
+```bash
+uvicorn api:app --host=0.0.0.0 --port 8000 --reload
+```
+
+#### 2\. Populate Data with `POST` Requests
+
+Before we can retrieve data, let's add a few to-do items using `POST` requests. We'll use `curl` for this.
+
+**Add Item 1:**
+
+```bash
+curl -X 'POST' \
+  'http://127.0.0.1:8000/todo' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "id": 1,
+  "item": "IGI ORIGIN"
+}'
+```
+
+*Response:* `{"message":"Todo added successfully","todo":{"id":1,"item":"IGI ORIGIN"}}`
+
+**Add Item 2:**
+
+```bash
+curl -X 'POST' \
+  'http://127.0.0.1:8000/todo' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "id": 2,
+  "item": "Call Of Duty Ghost"
+}'
+```
+
+*Response:* `{"message":"Todo added successfully","todo":{"id":2,"item":"Call Of Duty Ghost"}}`
+
+**Add Item 3:**
+
+```bash
+curl -X 'POST' \
+  'http://127.0.0.1:8000/todo' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "id": 3,
+  "item": "Call Of Duty Modern Warfare"
+}'
+```
+
+*Response:* `{"message":"Todo added successfully","todo":{"id":3,"item":"Call Of Duty Modern Warfare"}}`
+
+#### 3\. Retrieve Filtered Data with a `GET` Request
+
+Now, let's call our updated `GET` endpoint to retrieve all the to-dos.
+
+```bash
+curl -X 'GET' \
+  'http://127.0.0.1:8000/todo' \
+  -H 'accept: application/json'
+```
+
+-----
+
+### Analyzing the Final Output ✅
+
+After running the `GET` request, the API returns the following JSON. Notice how FastAPI has automatically filtered the output to match our `TodoItems` response model.
+
+```json
+{
+  "todos": [
+    {
+      "item": "IGI ORIGIN"
+    },
+    {
+      "item": "Call Of Duty Ghost"
+    },
+    {
+      "item": "Call Of Duty Modern Warfare"
+    }
+  ]
+}
+```
+
+As you can see, the `id` field is no longer present in the response. The output perfectly conforms to the structure we defined, demonstrating the power and convenience of using response models to shape your API's output without writing extra filtering logic.
+
+
+---
