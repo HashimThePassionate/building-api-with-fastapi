@@ -350,3 +350,127 @@ As you can see, the `id` field is no longer present in the response. The output 
 
 
 ---
+
+# 🚨 **Proper Error Handling in FastAPI**
+
+Handling errors correctly is crucial for building robust and user-friendly APIs. When requests fail, the responses should be clear and informative, not ugly or confusing. Errors can occur for many reasons, such as attempting to access a resource that doesn't exist, lacking the necessary permissions for a protected page, or encountering an internal server issue.
+
+In FastAPI, the standard way to handle these situations is by raising an `HTTPException`.
+
+-----
+
+## What is an `HTTPException`? 🌋
+
+An **HTTPException** is a special exception class provided by FastAPI. You can raise it at any point in your code to immediately stop the processing of a request and send a well-formatted HTTP error response to the client.
+
+The `HTTPException` class accepts three main arguments:
+
+  * **`status_code`**: The HTTP status code you want to return (e.g., `404`, `403`).
+  * **`detail`**: A clear, descriptive message to be sent in the response body, explaining the error.
+  * **`headers`**: An optional dictionary of any custom headers you need to include in the error response. For example, `{"X-Error": "Resource Not Found"}` adds a custom `X-Error` header to the response.
+
+-----
+
+## The Problem: Returning Incorrect Status Codes ⚠️
+
+In our current to-do application, if we try to retrieve a to-do item with an ID that doesn't exist, the API returns a success message with a `200 OK` status code. This is misleading because the operation actually failed. The correct behavior would be to return a `404 Not Found` status code.
+
+By updating our routes to use `HTTPException`, we can return the correct status code along with relevant details in the response.
+
+-----
+
+## The Solution: Raising `HTTPException` for Accurate Responses ✅
+
+Let's modify the routes responsible for retrieving, updating, and deleting a single to-do item in the `todo.py` file to incorporate `HTTPException`. We will add a custom header to the "get single todo" route as an example.
+
+#### Code: `todo.py`
+
+```python
+from fastapi import APIRouter, Path, HTTPException, status
+# ... other code
+
+@todo_router.get("/todo/{todo_id}")
+async def get_single_todo(todo_id: int = Path(..., title="The ID of the todo to retrieve.")) -> dict:
+    for todo in todo_list:
+        if todo.id == todo_id:
+            return {
+                "todo": todo
+            }
+    # If the loop finishes without finding the todo, raise an exception.
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Todo with supplied ID doesn't exist",
+        headers={"X-Error": "There was an error finding this todo"},
+    )
+
+@todo_router.put("/todo/{todo_id}")
+async def update_todo(todo_data: TodoItem, todo_id: int = Path(..., title="The ID of the todo to be updated.")) -> dict:
+    for todo in todo_list:
+        if todo.id == todo_id:
+            todo.item = todo_data.item
+            return {
+                "message": "Todo updated successfully."
+            }
+    # If the todo is not found, raise an exception.
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Todo with supplied ID doesn't exist",
+    )
+
+@todo_router.delete("/todo/{todo_id}")
+async def delete_single_todo(todo_id: int) -> dict:
+    for index in range(len(todo_list)):
+        todo = todo_list[index]
+        if todo.id == todo_id:
+            todo_list.pop(index)
+            return {
+                "message": "Todo deleted successfully."
+            }
+    # If the todo is not found, raise an exception.
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Todo with supplied ID doesn't exist",
+    )
+```
+
+#### Code Explanation 🧐
+
+  * **Import `HTTPException` and `status`**: We start by importing the necessary components from FastAPI. The `status` module provides convenient access to standard HTTP status codes, making the code more readable.
+  * **Updated Logic**: In each of the three routes, the logic is modified. If the `for` loop completes without finding a matching `todo_id`, it means the requested to-do does not exist.
+  * **`raise HTTPException(...)`**: Instead of returning a success message, the code now raises an `HTTPException`, which immediately sends an error response to the client.
+  * **Custom Headers Example**: In the `get_single_todo` route, we've added the `headers` argument:
+      * `headers={"X-Error": "There was an error finding this todo"}`: This dictionary adds a custom `X-Error` HTTP header to the `404 Not Found` response. This is useful for providing additional, machine-readable context about the error.
+
+-----
+
+### Verifying the Fix 🔬
+
+Now, if we retry the request for a non-existent to-do item, our API documentation will show the correct `404 Not Found` response. If we inspect the response headers using developer tools or a tool like `curl -v`, we would also see our custom `X-Error` header.
+
+-----
+
+## Customizing Success Status Codes 🎉
+
+Just as we can control error codes, FastAPI also allows us to override the default status code for successful operations. By default, a successful request returns a `200 OK`. However, for operations that create a new resource (like a `POST` request), the conventional status code is `201 Created`.
+
+We can specify this by adding the `status_code` argument to the route decorator.
+
+#### Code: `todo.py`
+
+```python
+@todo_router.post("/todo", status_code=201)
+async def add_todo(todo: Todo) -> dict:
+    todo_list.append(todo)
+    return {
+        "message": "Todo added successfully."
+    }
+```
+
+#### Code Explanation 🧐
+
+  * **`status_code=201`**: By adding this argument to the `@todo_router.post()` decorator, we are telling FastAPI that when this endpoint executes successfully, it should return an HTTP status of `201 Created` instead of the default `200 OK`.
+
+This section has shown how to return appropriate response codes for both errors and successful operations, a key practice in building professional and predictable APIs.
+
+
+---
