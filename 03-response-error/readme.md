@@ -1,5 +1,41 @@
 # 🚀 **Understanding Responses in FastAPI**
 
+<details>
+<summary>📋 <strong>Table of Contents</strong></summary>
+
+## 📑 Navigation Menu
+
+### 🔍 **Understanding Responses**
+- [📨 What is a Response Header?](#what-is-a-response-header-)
+- [📦 What is a Response Body?](#what-is-a-response-body-)
+
+### 🚦 **HTTP Status Codes**
+- [📊 Categories Overview](#categories-of-status-codes)
+- [ℹ️ 1XX Informational Responses](#1xx-informational-responses-ℹ️)
+- [✅ 2XX Success](#2xx-success-)
+- [↪️ 3XX Redirection](#3xx-redirection-↪️)
+- [❌ 4XX Client Error](#4xx-client-error-)
+- [🖥️ 5XX Server Error](#5xx-server-error-️)
+
+### 🏗️ **Building Response Models**
+- [🚫 The Challenge: Unfiltered API Responses](#the-challenge-unfiltered-api-responses--unfiltered)
+- [✨ The Solution: Crafting Pydantic Models](#the-solution-crafting-pydantic-models-for-output-)
+- [⚙️ Applying Response Model to Route](#applying-the-response-model-to-the-route-️)
+- [🧪 Practical Demonstration](#putting-it-all-together-a-practical-demonstration-)
+- [✅ Analyzing Final Output](#analyzing-the-final-output-)
+
+### 🚨 **Error Handling**
+- [🌋 What is HTTPException?](#what-is-an-httpexception-)
+- [⚠️ The Problem: Incorrect Status Codes](#the-problem-returning-incorrect-status-codes-️)
+- [✅ The Solution: HTTPException](#the-solution-raising-httpexception-for-accurate-responses-)
+- [🔬 Verifying the Fix](#verifying-the-fix-)
+- [🎉 Customizing Success Status Codes](#customizing-success-status-codes-)
+
+---
+</details>
+
+## 📖 **Overview**
+
 Responses are a fundamental part of how an API operates. They represent the feedback you receive after interacting with an API endpoint using any of the standard HTTP methods. Typically, an API response is formatted in JSON or XML, but it can also be a document.
 
 Every response is composed of two primary parts: a **header** and a **body**.
