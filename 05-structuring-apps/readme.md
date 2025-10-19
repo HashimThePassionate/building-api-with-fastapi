@@ -1,5 +1,53 @@
 # 🏗️ **Structuring FastAPI Applications**
 
+<details>
+<summary>📑 <strong>Table of Contents</strong></summary>
+
+- [🏗️ **Structuring FastAPI Applications**](#️-structuring-fastapi-applications)
+  - [🏛️ Structuring in FastAPI Applications](#️-structuring-in-fastapi-applications)
+    - [1. Create the Project Directory](#1-create-the-project-directory)
+    - [2. Create the Entry File and Subfolders](#2-create-the-entry-file-and-subfolders)
+    - [3. Initialize Folders as Python Packages](#3-initialize-folders-as-python-packages)
+    - [4. Set Up the Database Folder](#4-set-up-the-database-folder)
+    - [5. Create Feature-Specific Files](#5-create-feature-specific-files)
+  - [📦 Understanding the File Responsibilities](#-understanding-the-file-responsibilities)
+- [🚀 **Building an Event Planner Application**](#-building-an-event-planner-application)
+  - [🔧 Environment Setup and Dependencies](#-environment-setup-and-dependencies)
+    - [1. Create a Virtual Environment](#1-create-a-virtual-environment)
+    - [2. Activate the Virtual Environment](#2-activate-the-virtual-environment)
+    - [3. Install Application Dependencies](#3-install-application-dependencies)
+    - [4. Save Project Requirements](#4-save-project-requirements)
+  - [🏗️ Implementing the Application Models](#️-implementing-the-application-models)
+- [📈 Model Definitions and Relationships](#-model-definitions-and-relationships)
+  - [1. Model Flow Diagram](#1-model-flow-diagram)
+  - [2. Event Model Definition (`models/events.py`)](#2-event-model-definition-modelseventspy)
+  - [3. User Model Definition (`models/users.py`)](#3-user-model-definition-modelsuserspy)
+  - [4. The `NewUser` Model (Data Type)](#4-the-newuser-model-data-type)
+  - [5. User Sign-In Model (`models/users.py`)](#5-user-sign-in-model-modelsuserspy)
+- [🚀 **Blueprint for Interaction: Implementing API Routes**](#-blueprint-for-interaction-implementing-api-routes)
+  - [🚪 User Routes (`routes/users.py`)](#-user-routes-routesuserspy)
+    - [1. Defining the Basic Sign-Up Route](#1-defining-the-basic-sign-up-route)
+    - [2. Implementing the Sign-In Route](#2-implementing-the-sign-in-route)
+  - [🚨 A Critical Security Warning](#-a-critical-security-warning)
+- [🚀 **Activating the User Routes in `main.py`**](#-activating-the-user-routes-in-mainpy)
+  - [1. Update `main.py` with Imports](#1-update-mainpy-with-imports)
+  - [2. Create FastAPI Instance and Register Routes](#2-create-fastapi-instance-and-register-routes)
+  - [3. Add the Uvicorn Entry Point](#3-add-the-uvicorn-entry-point)
+  - [4. Run the Application 🖥️](#4-run-the-application-️)
+  - [5. Test the Endpoints 🧪](#5-test-the-endpoints-)
+  - [6. Explore the Interactive API Documentation 📚](#6-explore-the-interactive-api-documentation-)
+- [📅 **Implementing the Event Routes**](#-implementing-the-event-routes)
+  - [1. Initial Setup in `routes/events.py`](#1-initial-setup-in-routeseventspy)
+  - [2. Defining the GET Routes (Read Operations)](#2-defining-the-get-routes-read-operations)
+  - [3. Implementing POST (Create) and DELETE Routes](#3-implementing-post-create-and-delete-routes)
+  - [4. Registering the Event Router in `main.py`](#4-registering-the-event-router-in-mainpy)
+  - [5. Testing the New Event Routes 🧪](#5-testing-the-new-event-routes-)
+  - [✅ Project Status](#-project-status)
+
+</details>
+
+---
+
 In the previous sections, we explored the fundamentals of creating a FastAPI application. The single-file to-do app we built demonstrated the remarkable flexibility and power of FastAPI, highlighting how easy it is to get started.
 
 However, as applications grow in complexity and gain more features, a single-file structure becomes difficult to maintain. This is where the need for proper application structuring becomes essential.
