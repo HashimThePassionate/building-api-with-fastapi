@@ -202,18 +202,26 @@ The first step in building our application is to define the models for the event
 
 <kbd> <img src="./images/01.png"/> </kbd>
 
+# 📈 Model Definitions and Relationships
+
+Here is the updated documentation reflecting the modern Pydantic V2 syntax, which uses `ConfigDict` instead of the old `class Config`.
+
+-----
+
 ### 1\. Model Flow Diagram
 
 The following diagram (Figure 5.1) illustrates the modeling for both the user and event, as well as their relationship.
 
 As shown in the model diagram, each **USER** model will have an `Events` field. This field will contain a list of the **EVENT** objects that the user has ownership of.
 
+-----
+
 ### 2\. Event Model Definition (`models/events.py`)
 
-Let’s define the `Event` model in the `models/events.py` file. This model will include a `Config` subclass to provide example data for our API documentation.
+Let’s define the `Event` model in the `models/events.py` file. This model will use `model_config` and `ConfigDict` to provide example data for our API documentation.
 
 ```python
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List
 
 class Event(BaseModel):
@@ -224,8 +232,9 @@ class Event(BaseModel):
     tags: List[str]
     location: str
     
-    class Config:
-        schema_extra = {
+    # This is the updated Pydantic V2 configuration
+    model_config = ConfigDict(
+        json_schema_extra = {
             "example": {
                 "title": "FastAPI Book Launch",
                 "image": "https://linktomyimage.com/image.png",
@@ -234,11 +243,12 @@ class Event(BaseModel):
                 "location": "Google Meet"
             }
         }
+    )
 ```
 
 #### Code Explanation 🧐
 
-  * **`from pydantic import BaseModel`**: Imports the `BaseModel` class from Pydantic, which is the foundation for creating all data models.
+  * **`from pydantic import BaseModel, ConfigDict`**: Imports the `BaseModel` class (the foundation for models) and `ConfigDict` (the object used for model configuration).
   * **`from typing import List`**: Imports the `List` type hint, allowing us to define fields that are lists (arrays).
   * **`class Event(BaseModel):`**: Defines our new `Event` model, which inherits from `BaseModel`.
   * **`id: int`**: An integer field to store the event's unique ID.
@@ -247,45 +257,49 @@ class Event(BaseModel):
   * **`description: str`**: A string field for the detailed description of the event.
   * **`tags: List[str]`**: A field that is a list of strings, used for grouping or categorizing events.
   * **`location: str`**: A string field for the location of the event (e.g., "Google Meet" or a physical address).
-  * **`class Config:`**: A nested class used to provide configuration to the `Event` model.
-  * **`schema_extra`**: This class variable allows us to provide a dictionary of custom data.
+  * **`model_config = ConfigDict(...)`**: This class variable (named `model_config`) is assigned a `ConfigDict` object to provide configuration to the `Event` model. This replaces the old `class Config`.
+  * **`json_schema_extra`**: This key *inside* the `ConfigDict` allows us to provide a dictionary of custom data.
   * **`"example": { ... }`**: The key `"example"` is used by FastAPI's documentation. The provided dictionary will be shown as an example payload, guiding API users on what data to send.
+
+-----
 
 ### 3\. User Model Definition (`models/users.py`)
 
-Now that we have our `Event` model, let’s define the `User` model.
+Now that we have our `Event` model, let’s define the `User` model, also updated with `ConfigDict`.
 
 ```python
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional, List
 from models.events import Event
 
 class User(BaseModel):
     email: EmailStr
     password: str
-    events: Optional[List[Event]]
+    events: Optional[List[Event]] = None # Added default None
 
-    class Config:
-        schema_extra = {
+    # This is the updated Pydantic V2 configuration
+    model_config = ConfigDict(
+        json_schema_extra = {
             "example": {
                 "email": "fastapi@packt.com",
-                "username": "strong!!!",
+                "password": "strong!!!", # Corrected from "username"
                 "events": [],
             }
         }
+    )
 ```
 
 #### Code Explanation 🧐
 
-  * **`from pydantic import BaseModel, EmailStr`**: Imports `EmailStr`, a special Pydantic type that validates if a string is a valid email address.
+  * **`from pydantic import BaseModel, EmailStr, ConfigDict`**: Imports `BaseModel`, `EmailStr` (a special Pydantic type for email validation), and `ConfigDict` (for configuration).
   * **`from typing import Optional, List`**: Imports `Optional`, which indicates that a field is not required (it can be `None`).
   * **`from models.events import Event`**: Imports our `Event` model, allowing us to create a nested relationship.
   * **`class User(BaseModel):`**: Defines our new `User` model.
   * **`email: EmailStr`**: The user's email address. Pydantic will automatically validate its format.
   * **`password: str`**: The user's password, stored as a string.
-  * **`events: Optional[List[Event]]`**: This field defines the relationship. It is an optional list of `Event` models. It is empty by default.
-  * **`class Config:`**: The nested configuration class for the `User` model.
-  * **`schema_extra`**: Provides an example of user data for the API documentation.
+  * **`events: Optional[List[Event]] = None`**: This field defines the relationship. It is an optional list of `Event` models. It defaults to `None`.
+  * **`model_config = ConfigDict(...)`**: This class variable is assigned a `ConfigDict` object to configure the `User` model, replacing the old `class Config`.
+  * **`json_schema_extra`**: A key within `ConfigDict` that provides an example of user data for the API documentation. (Note: The example's `"username"` field was corrected to `"password"` to match the model definition).
 
 ### 4\. The `NewUser` Model (Data Type)
 
@@ -303,7 +317,7 @@ class UserSignIn(BaseModel):
     password: str
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "email": "fastapi@packt.com",
                 "password": "strong!!!",
@@ -317,7 +331,7 @@ class UserSignIn(BaseModel):
   * **`email: EmailStr`**: The email the user is using to sign in.
   * **`password: str`**: The password the user is providing.
   * **`class Config:`**: A nested configuration class for the `UserSignIn` model.
-  * **`schema_extra`**: Provides an example payload for the sign-in endpoint in the API documentation.
+  * **`json_schema_extra`**: Provides an example payload for the sign-in endpoint in the API documentation.
 
 Now that we have successfully implemented our models, we can proceed to build the routes that use them.
 
@@ -435,6 +449,158 @@ async def sign_user_in(user: UserSignIn) -> dict:
 In our current routes, we are storing and checking passwords in **plain text**. This is done **only for demonstration purposes** and is a **very wrong and insecure practice** in software engineering in general.
 
 Passwords should **never** be stored directly. We will discuss proper storage mechanisms, such as encryption and hashing, in later section, when our application moves from an in-memory dictionary to a real database.
+
+
+---
+
+# 🚀 **Activating the User Routes in `main.py`**
+
+With our user routes defined in `routes/users.py`, it's time to bring our application to life. We will register these routes in our main entry point, `main.py`, and launch the application.
+
+-----
+
+### 1\. Update `main.py` with Imports
+
+First, we need to import the necessary libraries and our newly created user router into the `main.py` file.
+
+```python
+from fastapi import FastAPI
+from routes.user import user_router
+import uvicorn
+```
+
+#### Code Explanation 🧐
+
+  * **`from fastapi import FastAPI`**: This imports the main `FastAPI` class, which is the core of our web application.
+  * **`from routes.user import user_router`**: This imports the `user_router` object we defined in our `routes/users.py` file. This router contains all our user-related endpoints (like `/signup` and `/signin`).
+  * **`import uvicorn`**: This imports `uvicorn`, the ASGI (Asynchronous Server Gateway Interface) server that will run our application.
+
+-----
+
+### 2\. Create FastAPI Instance and Register Routes
+
+Next, we create an instance of the `FastAPI` class and "include" our user routes within it.
+
+```python
+app = FastAPI()
+
+# Register routes
+app.include_router(user_router, prefix="/user")
+```
+
+#### Code Explanation 🧐
+
+  * **`app = FastAPI()`**: This line creates the main application instance, which we have named `app`.
+  * **`app.include_router(user_router, prefix="/user")`**: This is a key step. It tells the main `app` to include all the routes defined in `user_router`.
+  * **`prefix="/user"`**: This powerful argument adds a URL prefix to every route in `user_router`. This means:
+      * The `/signup` route from `user_router` will now be accessible at `/user/signup`.
+      * The `/signin` route from `user_router` will now be accessible at `/user/signin`.
+        This helps organize our API endpoints by feature.
+
+-----
+
+### 3\. Add the Uvicorn Entry Point
+
+To make our `main.py` file runnable as a script, we add the standard Python entry point.
+
+```python
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
+```
+
+#### Code Explanation 🧐
+
+  * **`if __name__ == "__main__":`**: This is a standard Python condition. The code inside this block will *only* run when you execute the `main.py` file directly (e.g., `python main.py`), not when it's imported by another file.
+  * **`uvicorn.run(...)`**: This is the command that starts the web server.
+  * **`"main:app"`**: This tells Uvicorn where to find our application. It means "look inside the file named `main.py` for the variable named `app`."
+  * **`host="0.0.0.0"`**: This setting makes the server accessible from any device on your network, not just from your local machine.
+  * **`port=8080`**: This specifies that the application will run on port `8080`.
+  * **`reload=True`**: This enables "hot reloading." The server will automatically restart every time you save a change in your code, which is extremely useful during development.
+
+-----
+
+### 4\. Run the Application 🖥️
+
+Now, let's start the application from the terminal:
+
+```bash
+python main.py
+```
+
+You will see console output confirming the server is running and watching for code changes:
+
+```console
+INFO:     Will watch for changes in these directories: ['C:\\Users\\Hashim\\Desktop\\resources\\fastapi-api\\05-structuring-apps']
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+INFO:     Started reloader process [5672] using WatchFiles
+INFO:     Started server process [14360]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+```
+
+-----
+
+### 5\. Test the Endpoints 🧪
+
+With our application running, we can test the user routes we implemented using `curl`.
+
+#### A. Test User Sign-Up (Success)
+
+We'll send a `POST` request to the `/user/signup` endpoint to create a new user.
+
+```bash
+curl -X POST http://127.0.0.1:8080/user/signup -H "Content-Type: application/json" -d '{"email": "hashiimtahir@gmail.com", "password": "Pakistan1234-", "username": "hashimtahir"}'
+```
+
+This request returns a successful response, indicating the user was registered:
+
+```json
+{
+ "message": "User successfully registered!"
+}
+```
+
+#### B. Test User Sign-In (Success)
+
+The successful response confirms the operation. Now, let’s test the `/user/signin` route with the correct credentials.
+
+```bash
+curl -X POST 'http://127.0.0.1:8080/user/signin' -H 'accept: application/json' -H 'Content-Type: application/json' -d '{"email": "hashiimtahir@gmail.com", "password": "Pakistan1234-"}'
+```
+
+The response to this request is as follows:
+
+```json
+{
+ "message": "User signed in successfully"
+}
+```
+
+#### C. Test User Sign-In (Failure)
+
+If we pass an incorrect password, our application should return the `HTTPException` detail message we defined.
+
+```bash
+curl -X POST 'http://127.0.0.1:8080/user/signin' -H 'accept: application/json' -H 'Content-Type: application/json' -d '{"email": "fastapi@packt.com", "password": "password!"}'
+```
+
+The response from this failed request is as follows:
+
+```json
+{
+ "detail": "Wrong credential passed"
+}
+```
+
+-----
+
+### 6\. Explore the Interactive API Documentation 📚
+
+We can also view and interact with our routes from the automatic, interactive documentation provided by FastAPI (which is powered by Swagger UI).
+
+Visit **`http://127.0.0.1:8080/docs`** in your browser to access this documentation.
+
+Now that we have successfully implemented the user routes, we can move on to the next part of our application.
 
 
 ---
