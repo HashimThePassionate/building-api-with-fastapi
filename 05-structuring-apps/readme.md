@@ -146,7 +146,7 @@ In this section, we will build a complete event planner application. In this app
 
 Each registered user and event will have a **unique ID**. This is to prevent conflicts when managing users and events that might share the same ID.
 
-For this section, we will not be prioritizing **authentication** or **database management**, as those topics will be discussed in depth in later chapters.
+For this section, we will not be prioritizing **authentication** or **database management**, as those topics will be discussed in depth in later sections.
 
 -----
 
@@ -320,6 +320,121 @@ class UserSignIn(BaseModel):
   * **`schema_extra`**: Provides an example payload for the sign-in endpoint in the API documentation.
 
 Now that we have successfully implemented our models, we can proceed to build the routes that use them.
+
+
+---
+
+# 🚀 **Blueprint for Interaction: Implementing API Routes**
+
+The next step in building our application is to set up its routing system. We will be designing the API routes for both **events** and **users**.
+
+The user routes will consist of endpoints for sign-up, sign-in, and sign-out. Access to the event routes will be controlled:
+
+  * **Authenticated users** will have access to create, update, and delete events.
+  * **The public** will be able to view events that have been created.
+
+<div align="center">
+  <img src="./images/02.png"/>
+</div>
+
+The following diagram (Figure 5.2) illustrates the relationship and structure of these routes.
+
+-----
+
+## 🚪 User Routes (`routes/users.py`)
+
+Now that we have a clear idea of which routes to implement from Figure 5.2, we will begin by defining the user-related routes in our `routes/users.py` file.
+
+### 1\. Defining the Basic Sign-Up Route
+
+First, let's create the endpoint for new users to register.
+
+```python
+from fastapi import APIRouter, HTTPException, status
+from models.users import User, UserSignIn
+
+user_router = APIRouter(
+    tags=["User"],
+)
+
+users = {}
+
+@user_router.post("/signup")
+async def sign_user_up(data: User) -> dict:
+    if data.email in users:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User with supplied username exists"
+        )
+    
+    users[data.email] = data
+    
+    return {
+        "message": "User successfully registered!"
+    }
+```
+
+#### Code Explanation 🧐
+
+  * **`from fastapi ...`**: We import `APIRouter` to create a new router, `HTTPException` to return error responses, and `status` for convenient access to standard HTTP status codes.
+  * **`from models.users ...`**: We import our `User` and `UserSignIn` Pydantic models.
+  * **`user_router = APIRouter(...)`**: We create a new router instance. The `tags=["User"]` argument is for documentation purposes; it will group all routes on this router under the "User" tag in the API docs.
+  * **`users = {}`**: For now, we are using a simple Python dictionary as an in-memory "database." The keys will be user emails and the values will be the `User` objects. This will be replaced with a real database in section 6.
+  * **`@user_router.post("/signup")`**: This decorator registers the function below to handle `POST` requests to the `/signup` path.
+  * **`async def sign_user_up(data: User) -> dict:`**: This is our route handler function.
+      * `data: User`: FastAPI will validate the incoming request body to ensure it matches the structure of our `User` model.
+      * `-> dict`: This indicates that the function will return a Python dictionary (which FastAPI will convert to JSON).
+  * **`if data.email in users:`**: This is our first business logic check. We see if a user with the provided email already exists in our `users` dictionary.
+  * **`raise HTTPException(...)`**: If the user already exists, we stop execution and immediately send an error response to the client.
+      * `status_code=status.HTTP_409_CONFLICT`: This sets the HTTP status to 409, indicating a conflict with the current state of the server (a duplicate user).
+      * `detail=...`: This provides the error message in the JSON response body.
+  * **`users[data.email] = data`**: If the user is new, we add them to our `users` dictionary.
+  * **`return { ... }`**: We return a successful JSON response with a status code of 200 OK (the default for `POST`).
+
+-----
+
+### 2\. Implementing the Sign-In Route
+
+Next, let’s implement the endpoint for existing users to sign in.
+
+```python
+@user_router.post("/signin")
+async def sign_user_in(user: UserSignIn) -> dict:
+    if user.email not in users:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User does not exist"
+        )
+    
+    if users[user.email].password != user.password:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Wrong credential passed"
+        )
+    
+    return {
+        "message": "User signed in successfully"
+    }
+```
+
+#### Code Explanation 🧐
+
+  * **`@user_router.post("/signin")`**: We register this function to handle `POST` requests to `/signin`.
+  * **`async def sign_user_in(user: UserSignIn) -> dict:`**: The function handler.
+      * `user: UserSignIn`: Note that this endpoint uses the `UserSignIn` model. This model only includes `email` and `password`, which is exactly what we need for logging in.
+  * **`if user.email not in users:`**: The first step is to check if the user even exists in our database.
+  * **`raise HTTPException(...)`**: If the user's email is not found, we raise a `404 NOT_FOUND` error.
+  * **`if users[user.email].password != user.password:`**: If the user *does* exist, we proceed to check their password. We retrieve the stored user data using `users[user.email]` and compare its `password` attribute to the `password` provided in the request body.
+  * **`raise HTTPException(...)`**: If the passwords do not match, we raise a `403 FORBIDDEN` error, indicating the client is not authorized.
+  * **`return { ... }`**: If both checks pass (the user exists and the password is correct), we return a success message.
+
+-----
+
+## 🚨 A Critical Security Warning
+
+In our current routes, we are storing and checking passwords in **plain text**. This is done **only for demonstration purposes** and is a **very wrong and insecure practice** in software engineering in general.
+
+Passwords should **never** be stored directly. We will discuss proper storage mechanisms, such as encryption and hashing, in later section, when our application moves from an in-memory dictionary to a real database.
 
 
 ---
