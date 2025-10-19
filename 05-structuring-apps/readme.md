@@ -604,3 +604,256 @@ Now that we have successfully implemented the user routes, we can move on to the
 
 
 ---
+
+# 📅 **Implementing the Event Routes**
+
+With the user routes in place, the next logical step is to implement the routes for all event-related operations. We will define these in the `routes/events.py` file.
+
+-----
+
+### 1\. Initial Setup in `routes/events.py`
+
+First, we start by importing the necessary dependencies and defining our new event router.
+
+```python
+from fastapi import APIRouter, Body, HTTPException, status
+from models.events import Event
+from typing import List
+
+event_router = APIRouter(
+    tags=["Events"]
+)
+
+events = []
+```
+
+#### Code Explanation 🧐
+
+  * **`from fastapi ...`**: We import:
+      * `APIRouter`: The class used to create a "mini" FastAPI application (a router).
+      * `Body`: A class used to explicitly declare that a parameter comes from the request body.
+      * `HTTPException`: The class for returning formatted error responses.
+      * `status`: An object that provides convenient access to standard HTTP status codes.
+  * **`from models.events import Event`**: We import our `Event` Pydantic model, which will be used for data validation.
+  * **`from typing import List`**: This is a standard Python type hint we use to indicate a list of items.
+  * **`event_router = APIRouter(...)`**: We create a new router instance. The `tags=["Events"]` argument will group all routes on this router under the "Events" tag in the automatic API documentation.
+  * **`events = []`**: We initialize an empty list named `events`. This list will act as our temporary in-memory "database" to store event objects.
+
+-----
+
+### 2\. Defining the GET Routes (Read Operations)
+
+The next step is to define the routes for retrieving event data. We'll create one route to get all events and another to get a single event by its ID.
+
+```python
+@event_router.get("/", response_model=List[Event])
+async def retrieve_all_events() -> List[Event]:
+    return events
+
+@event_router.get("/{id}", response_model=Event)
+async def retrieve_event(id: int) -> Event:
+    for event in events:
+        if event.id == id:
+            return event
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Event with supplied ID does not exist"
+    )
+```
+
+#### Code Explanation 🧐
+
+  * **`@event_router.get("/", response_model=List[Event])`**:
+
+      * `@event_router.get("/")`: Registers this function to handle `GET` requests at the router's root path (which will be `/event/`).
+      * `response_model=List[Event]`: This tells FastAPI to validate the *output* of this function. It ensures the response is a list, and that each item in the list conforms to the `Event` model.
+      * `return events`: The function simply returns the entire `events` list.
+
+  * **`@event_router.get("/{id}", response_model=Event)`**:
+
+      * `@event_router.get("/{id}")`: Registers this function to handle `GET` requests at a dynamic path (e.g., `/event/1`, `/event/2`). The `{id}` is a path parameter.
+      * `response_model=Event`: Ensures the output will be a *single* object matching the `Event` model.
+      * `async def retrieve_event(id: int)`: The function accepts the `id` from the path, and FastAPI automatically converts it to an integer.
+      * `for event in events: ...`: The code loops through our `events` list. If it finds an event with a matching ID, it returns that event.
+      * `raise HTTPException(...)`: If the loop finishes without finding a match, the function raises a `404 NOT_FOUND` error, which will be sent to the client as a JSON response.
+
+-----
+
+### 3\. Implementing POST (Create) and DELETE Routes
+
+Now, let's implement the routes for creating a new event, deleting a single event, and deleting all events.
+
+```python
+@event_router.post("/new")
+async def create_event(body: Event = Body(...)) -> dict:
+    events.append(body)
+    return {
+        "message": "Event created successfully"
+    }
+
+@event_router.delete("/{id}")
+async def delete_event(id: int) -> dict:
+    for event in events:
+        if event.id == id:
+            events.remove(event)
+            return {
+                "message": "Event deleted successfully"
+            }
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Event with supplied ID does not exist"
+    )
+
+@event_router.delete("/")
+async def delete_all_events() -> dict:
+    events.clear()
+    return {
+        "message": "Events deleted successfully"
+    }
+```
+
+#### Code Explanation 🧐
+
+  * **`@event_router.post("/new")`**:
+
+      * Registers a `POST` request to the `/new` path (which will become `/event/new`).
+      * `async def create_event(body: Event = Body(...))`\*\*: The function's `body` parameter is type-hinted as `Event`. FastAPI will automatically read the JSON from the request body, validate it against the `Event` model, and pass the resulting object as the `body` argument.
+      * `events.append(body)`: The validated new event is added to our in-memory list.
+      * `return { ... }`: A simple JSON message is returned to confirm success.
+
+  * **`@event_router.delete("/{id}")`**:
+
+      * Registers a `DELETE` request to a dynamic path (e.g., `/event/1`).
+      * `async def delete_event(id: int)`: Accepts the `id` from the path.
+      * `for event in events: ...`: The code loops to find the event. If found, `events.remove(event)` deletes it from the list, and a success message is returned.
+      * `raise HTTPException(...)`: If the event isn't found, a `404` error is raised.
+
+  * **`@event_router.delete("/")`**:
+
+      * Registers a `DELETE` request to the router's root path (`/event/`).
+      * `events.clear()`: This method removes all items from the `events` list.
+      * `return { ... }`: A confirmation message is returned.
+
+We have now successfully implemented the core routes for events.
+
+> **Note:** As mentioned in the text, the `UPDATE` route will be implemented in a later chapter, where we will migrate our application from an in-memory list to an actual database.
+
+-----
+
+### 4\. Registering the Event Router in `main.py`
+
+Now that we have implemented the event routes, we must update our main application file (`main.py`) to include this new router.
+
+```python
+from fastapi import FastAPI
+from routes.user import user_router
+from routes.events import event_router  # Import the new router
+import uvicorn
+
+app = FastAPI()
+
+# Register routes
+app.include_router(user_router, prefix="/user")
+app.include_router(event_router, prefix="/event") # Add the new router
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
+```
+
+#### Code Explanation 🧐
+
+  * **`from routes.events import event_router`**: We import the new `event_router` we just created.
+  * **`app.include_router(event_router, prefix="/event")`**: This is the crucial new line. We register the `event_router` with our main `app` instance.
+  * **`prefix="/event"`**: This argument adds a URL prefix to every route defined in `event_router`. This means:
+      * `GET /` becomes `GET /event/`
+      * `GET /{id}` becomes `GET /event/{id}`
+      * `POST /new` becomes `POST /event/new`
+      * `DELETE /{id}` becomes `DELETE /event/{id}`
+
+Since our server is running with `reload=True`, the application automatically restarts and reloads on this change.
+
+-----
+
+### 5\. Testing the New Event Routes 🧪
+
+Let’s test all the new endpoints to ensure they work as expected.
+
+#### Test 1: Retrieve All Events (Empty List)
+
+First, we call the `GET /event/` endpoint. Since no data is present yet, it correctly returns an empty array.
+
+```bash
+(venv)$ curl -X 'GET' \
+ 'http://0.0.0.0:8080/event/' \
+ -H 'accept: application/json'
+```
+
+**Response:**
+
+```json
+[]
+```
+
+#### Test 2: Create a New Event
+
+Next, let’s add data to our array using a `POST` request to `/event/new`.
+
+```bash
+curl -X POST 'http://127.0.0.1:8080/event/new' -H 'accept: application/json' -H 'Content-Type: application/json' -d '{"id": 1, "title": "FastAPI Book Launch", "image": "https://linktomyimage.com/image.png", "description": "We will be discussing the contents of the FastAPI book in this event.Ensure to come with your own copy to win gifts!", "tags": ["python", "fastapi", "book", "launch"], "location": "Google Meet"}'
+```
+
+**Response:**
+
+```json
+{
+ "message": "Event created successfully"
+}
+```
+
+#### Test 3: Retrieve a Single Event
+
+Now that an event with ID 1 exists, we can retrieve it.
+
+```bash
+curl -X GET 'http://127.0.0.1:8080/event/1' -H 'accept: application/json'
+```
+
+**Response:**
+
+```json
+{"id":1,"title":"FastAPI Book Launch","image":"https://linktomyimage.com/image.png","description":"We will be discussing the contents of the FastAPI book in this event.Ensure to come with your own copy to win gifts!","tags":["python","fastapi","book","launch"],"location":"Google Meet"}
+```
+
+#### Test 4: Delete the Event (Success)
+
+Let’s delete the event we just created.
+
+```bash
+curl -X DELETE 'http://127.0.0.1:8080/event/1' -H 'accept: application/json'
+```
+
+**Response:**
+
+```json
+{
+ "message": "Event deleted successfully"
+}
+```
+
+#### Test 5: Delete the Event (Failure)
+
+If we retry the exact same delete command, the event with ID 1 no longer exists. The application correctly returns the `404 NOT_FOUND` error we defined in our route.
+
+**Response:**
+
+```json
+{
+ "detail": "Event with supplied ID does not exist"
+}
+```
+
+-----
+
+### ✅ Project Status
+
+We have now successfully implemented both the models and the routes for our planner application. We have also tested all endpoints to assess their working status.
