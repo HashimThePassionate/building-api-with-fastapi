@@ -206,6 +206,7 @@ The first step in building our application is to define the models for the event
 </div>
 <kbd/>
 
+
 ### 1\. Model Flow Diagram
 
 The following diagram (Figure 5.1) illustrates the modeling for both the user and event, as well as their relationship.
