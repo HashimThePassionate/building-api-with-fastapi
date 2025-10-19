@@ -157,7 +157,7 @@ To kick-start the development, let us create a virtual environment and activate 
 ### 1\. Create a Virtual Environment
 
 ```bash
-$ python3 -m venv venv
+python3 -m venv venv
 ```
 
   * This command uses the `python3` interpreter's built-in `venv` module to create a new virtual environment in a directory named `venv`.
@@ -165,17 +165,17 @@ $ python3 -m venv venv
 ### 2\. Activate the Virtual Environment
 
 ```bash
-$ source venv/bin/activate
+source venv/bin/activate
 ```
 
-  * This command activates the new virtual environment. Your terminal prompt will usually change to show `(venv)` at the beginning.
+  * This command activates the new virtual environment. Your terminal prompt will usually change to show `` at the beginning.
 
 ### 3\. Install Application Dependencies
 
 Next, let’s install the necessary packages for our application.
 
 ```bash
-(venv)$ pip install fastapi uvicorn "pydantic[email]"
+pip install fastapi uvicorn "pydantic[email]"
 ```
 
   * **`fastapi`**: This installs the main FastAPI framework.
@@ -187,7 +187,7 @@ Next, let’s install the necessary packages for our application.
 Lastly, let’s save the installed dependencies into a `requirements.txt` file.
 
 ```bash
-(venv)$ pip freeze > requirements.txt
+pip freeze > requirements.txt
 ```
 
   * This command "freezes" all the currently installed packages in the environment and saves their exact versions to the `requirements.txt` file, making it easy to replicate this environment later.
@@ -199,6 +199,12 @@ Now that we have successfully installed our dependencies and set up our developm
 ## 🏗️ Implementing the Application Models
 
 The first step in building our application is to define the models for the event and the user. The models describe how data will be stored, validated, and represented in our application.
+
+<kbd>
+<div align="center">
+  <img src="./images/01.png"/>
+</div>
+<kbd/>
 
 ### 1\. Model Flow Diagram
 
