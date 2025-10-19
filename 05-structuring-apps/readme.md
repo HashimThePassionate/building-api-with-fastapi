@@ -200,10 +200,7 @@ Now that we have successfully installed our dependencies and set up our developm
 
 The first step in building our application is to define the models for the event and the user. The models describe how data will be stored, validated, and represented in our application.
 
-<div align="center" style="border: 2px solid black;">
-  <img src="./images/01.png"/>
-</div>
-
+<kbd> <img src="./images/01.png"/> </kbd>
 
 ### 1\. Model Flow Diagram
 
