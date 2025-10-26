@@ -346,4 +346,311 @@ INFO:     Stopping reloader process [14900]
   * **`Application startup complete.`**: The server is now running and ready to accept requests.
   * **`Application shutdown...`**: These lines appear when you stop the server (e.g., with `CTRL+C`), showing the shutdown part of the `lifespan` function executing correctly.
 
-  ---
+---
+
+# 🗄️ **Implementing Database-Powered Event Routes**
+
+Now that our database connection is established and our models are defined, we will refactor our event routes to perform full CRUD (Create, Read, Update, Delete) operations by interacting directly with our SQL database.
+
+-----
+
+## ✨ 1. Creating Events
+
+Let's begin by updating our routes file to handle the creation of new events.
+
+### A. Update Imports in `routes/events.py`
+
+First, we must update the imports in `routes/events.py` to include our SQLModel components and the session management function. The `get_session` function is imported so that our routes can access the database session object.
+
+```python
+from typing import List
+from sqlmodel import Session, select
+from database.connection import get_session
+from fastapi import APIRouter, HTTPException, status, Depends
+from models.events import Event, EventUpdate
+```
+
+> ### 💡 What is `Depends`?
+>
+> The **`Depends`** class is a core part of FastAPI responsible for **Dependency Injection**.
+>
+> Think of it as a bouncer at a club. Before your route (the party) can start, the bouncer (`Depends`) must check a "truth source" (like our `get_session` function).
+>
+> `Depends` takes this function as its argument and is passed as a parameter in your route's function. This mandates that the dependency (e.g., "get a valid database session") must be satisfied *before* any of your route's code can be executed. It automatically calls the function, gets the result (the `session`), passes it to your route, and in our case, gracefully closes it afterward.
+
+### B. Update the `POST` Route
+
+Next, let’s update the `POST` route function, `create_event`, to use our database session.
+
+```python
+@event_router.post("/new")
+async def create_event(new_event: Event, session: Session = Depends(get_session)) -> dict:
+    session.add(new_event)
+    session.commit()
+    session.refresh(new_event)
+    return {
+        "message": "Event created successfully",
+    }
+```
+
+#### Code Explanation 🧐
+
+  * **`async def create_event(new_event: Event, session: Session = Depends(get_session))`**:
+      * `new_event: Event`: FastAPI validates the incoming JSON body against our `Event` table model.
+      * `session: Session = Depends(get_session)`: This is the dependency injection. FastAPI will run the `get_session` function, and the `session` object it `yield`s will be passed to this variable.
+  * **`session.add(new_event)`**: This adds the new `new_event` object to the session in memory. It is now "staged" for the database.
+  * **`session.commit()`**: This command executes the database transaction, saving the "staged" data to the `event` table.
+  * **`session.refresh(new_event)`**: This is a crucial step. When we commit, the database generates the `id` (our primary key). The `new_event` object in our Python code doesn't have this ID yet. `session.refresh()` queries the database *back* for the data we just inserted, "refreshing" our `new_event` object with the new `id`.
+  * **`return { ... }`**: We return a success message.
+
+### C. Testing the `POST` Route 🧪
+
+Let’s test the route to preview the changes. If the operation fails, the library will automatically throw an exception.
+
+```bash
+curl -X 'POST' 'http://127.0.0.1:8080/event/new' \
+-H 'accept: application/json' \
+-H 'Content-Type: application/json' \
+-d '{"title": "FastAPI Book Launch", "image": "fastapi-book.jpeg", "description": "We will be discussing the contents of the FastAPI book in this event. Ensure to come with your own copy to win gifts!", "tags": ["python", "fastapi", "book", "launch"], "location": "Google Meet"}'
+```
+
+A successful response is returned:
+
+```json
+{
+ "message": "Event created successfully"
+}
+```
+
+-----
+
+## 📖 2. Read Events
+
+Let’s update the `GET` routes to retrieve data directly from the database instead of the in-memory list.
+
+### A. Retrieve All Events
+
+```python
+@event_router.get("/", response_model=List[Event])
+async def retrieve_all_events(session: Session = Depends(get_session)) -> List[Event]:
+    statement = select(Event)
+    events = session.exec(statement).all()
+    return events
+```
+
+#### Code Explanation 🧐
+
+  * **`session: Session = Depends(get_session)`**: Just like before, we use dependency injection to get a database session.
+  * **`statement = select(Event)`**: This creates a SQLModel `SELECT` statement. It's the equivalent of `SELECT * FROM event`.
+  * **`events = session.exec(statement).all()`**: This line executes the `SELECT` statement.
+      * `session.exec(statement)` runs the query.
+      * `.all()` fetches all results and returns them as a list of `Event` objects.
+  * **`return events`**: The list of events is returned. `response_model=List[Event]` ensures they are serialized correctly as JSON.
+
+### B. Retrieve a Single Event
+
+Likewise, the route to display an event’s data when retrieved by its ID is also updated.
+
+```python
+@event_router.get("/{id}", response_model=Event)
+async def retrieve_event(id: int, session: Session = Depends(get_session)) -> Event:
+    event = session.get(Event, id)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event with supplied ID does not exist"
+        )
+    return event
+```
+
+#### Code Explanation 🧐
+
+  * **`event = session.get(Event, id)`**: This is the most efficient way to get a single item by its primary key. We ask the `session` to `get` an object of type `Event` with the primary key `id`.
+  * **`if not event:`**: If `session.get` returns `None` (meaning no event with that ID was found), this check will be true.
+  * **`raise HTTPException(...)`**: We immediately stop and return a `404 NOT_FOUND` error, as defined in our logic.
+  * **`return event`**: If the event is found, it is returned.
+
+### C. Testing the `GET` Routes 🧪
+
+Let’s test both routes by first sending a `GET` request to retrieve the list of all events.
+
+```bash
+curl -X 'GET' \
+ 'http://127.0.0.1:8080/event/' \
+ -H 'accept: application/json'
+```
+
+We get a response containing the event we created:
+
+```json
+[
+ {
+ "id": 1,
+ "title": "FastAPI Book Launch",
+ "image": "fastapi-book.jpeg",
+ "description": "We will be discussing the contents of the FastAPI book in this event.Ensure to come with your own copy to win gifts!",
+ "tags": [
+ "python",
+ "fastapi",
+ "book",
+ "launch"
+ ],
+ "location": "Google Meet"
+ }
+]
+```
+
+Next, let’s retrieve the event by its ID:
+
+```bash
+curl -X 'GET' \
+ 'http://127.0.0.1:8080/event/1' \
+ -H 'accept: application/json'
+```
+
+```json
+{
+ "id": 1,
+ "title": "FastAPI Book Launch",
+ "image": "fastapi-book.jpeg",
+ "description": "The launch of the FastAPI book will hold on xyz.",
+ "tags": [
+ "python",
+ " fastapi"
+ ],
+ "location": "virtual"
+}
+```
+
+With the READ operations successfully implemented, let’s add an edit feature.
+
+-----
+
+## ✏️ 3. Update Events
+
+Let’s add the `UPDATE` route in `routes/events.py`.
+
+```python
+@event_router.put("/edit/{id}", response_model=Event)
+async def update_event(id: int, new_data: EventUpdate, session: Session = Depends(get_session)) -> Event:
+    event = session.get(Event, id)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event with supplied ID does not exist"
+        )
+
+    event_data = new_data.model_dump(exclude_unset=True)
+
+    for key, value in event_data.items():
+        setattr(event, key, value)
+
+    session.add(event)
+    session.commit()
+    session.refresh(event)
+    return event
+```
+
+#### Code Explanation 🧐
+
+  * **`async def update_event(id: int, new_data: EventUpdate, ...)`**:
+      * `id: int`: We get the ID of the event to update from the URL path.
+      * `new_data: EventUpdate`: We use our `EventUpdate` model to validate the request body. This model has all optional fields.
+  * **`event = session.get(Event, id)`**: We first fetch the event from the database.
+  * **`if not event:`**: We raise a `404` error if the event doesn't exist.
+  * **`event_data = new_data.model_dump(exclude_unset=True)`**: This is the magic for partial updates (PATCH).
+      * `new_data.model_dump()` creates a dictionary from the `new_data` model.
+      * `exclude_unset=True` tells Pydantic to *only* include fields that the client *actually sent* in the JSON request. Any fields the client omitted will not be in this dictionary, so we don't accidentally overwrite existing data with `None`.
+  * **`for key, value in event_data.items():`**: We loop through the dictionary of *only the provided fields*.
+  * **`setattr(event, key, value)`**: This dynamically updates the `event` object we fetched from the database. `setattr(event, "title", "New Title")` is the same as `event.title = "New Title"`.
+  * **`session.add(event)`**: We add the *updated* `event` object back to the session.
+  * **`session.commit()`**: We save the changes to the database.
+  * **`session.refresh(event)`**: We refresh the `event` object to get the definitive state from the database.
+  * **`return event`**: The fully updated event object is returned.
+
+### Testing the `PUT` Route 🧪
+
+Let’s update the existing event’s title:
+
+```bash
+curl -X 'PUT' \
+ 'http://127.0.0.1:8080/event/edit/1' \
+ -H 'accept: application/json' \
+ -H 'Content-Type: application/json' \
+ -d '{
+ "title": "Packt'\''s FastAPI book launch II"
+}'
+```
+
+The response shows the updated data:
+
+```json
+{
+ "id": 1,
+ "title": "Packt's FastAPI book launch II",
+ "image": "fastapi-book.jpeg",
+ "description": "The launch of the FastAPI book will hold on xyz.",
+ "tags": ["python", "fastapi"],
+ "location": "virtual" 
+}
+```
+
+-----
+
+## 🗑️ 4. Delete Event
+
+Now that we have added the update functionality, let’s quickly add a delete operation. In `events.py`, update the delete route.
+
+```python
+@event_router.delete("/delete/{id}")
+async def delete_event(id: int, session: Session = Depends(get_session)) -> dict:
+    event = session.get(Event, id)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event with supplied ID does not exist"
+        )
+    session.delete(event)
+    session.commit()
+    return {"message": "Event deleted successfully"}
+```
+
+#### Code Explanation 🧐
+
+  * **`event = session.get(Event, id)`**: We fetch the event by its ID.
+  * **`if not event:`**: We check if it exists and return a `404` if not.
+  * **`session.delete(event)`**: We mark the fetched event for deletion within the session.
+  * **`session.commit()`**: We execute the `DELETE` command in the database, making the deletion permanent.
+  * **`return { ... }`**: A success message is returned.
+
+### Testing the `DELETE` Route 🧪
+
+Let’s delete the event from the database:
+
+```bash
+curl -X 'DELETE' \
+ 'http://127.0.0.1:8080/event/delete/2' \
+ -H 'accept: application/json'
+```
+
+The request returns a successful response:
+
+```json
+{
+ "message": "Event deleted successfully"
+}
+```
+
+Now, if we retrieve the list of events, we get an empty array for a response:
+
+```bash
+curl -X 'GET' \
+ 'http://0.0.0.0:8080/event/' \
+ -H 'accept: application/json'
+```
+
+```json
+[]
+```
+
+---
